@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import { useFormState, useFormStatus } from 'react-dom';
 import { login } from './actions';
@@ -13,8 +14,23 @@ function SubmitBtn() {
   );
 }
 
+function EyeIcon({ open }: { open: boolean }) {
+  return open ? (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.86 21.86 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.82 21.82 0 0 1-3.22 4.44M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+      <path d="M1 1l22 22" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const [state, formAction] = useFormState(login, { error: '' } as any);
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -32,7 +48,24 @@ export default function LoginPage() {
           </div>
           <div>
             <label className="label" htmlFor="password">كلمة السر</label>
-            <input id="password" name="password" type="password" className="input" autoComplete="current-password" required />
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                className="input pe-10"
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 end-0 flex items-center pe-3 text-brand-taupe hover:text-brand-red"
+                aria-label={showPassword ? 'إخفاء كلمة السر' : 'إظهار كلمة السر'}
+              >
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
           </div>
           {state?.error ? (
             <p className="rounded-lg bg-brand-red/10 px-3 py-2 text-sm text-brand-red">{state.error}</p>
