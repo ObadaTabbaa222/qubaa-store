@@ -187,8 +187,8 @@ function studentCountLabel(n: number) {
 function useStudentEditor(student: Student) {
   const [editing, setEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [runningBalance, setRunningBalance] = useState(student.balance);
-  const [adjustAmount, setAdjustAmount] = useState<number>(0);
+  const [balanceInput, setBalanceInput] = useState(String(student.balance));
+  const [balanceError, setBalanceError] = useState('');
   const [savingBalance, startBalance] = useTransition();
   const [saved, setSaved] = useState(false);
   const [deleting, startDelete] = useTransition();
@@ -198,17 +198,25 @@ function useStudentEditor(student: Student) {
     if (editState?.ok) setEditing(false);
   }, [editState]);
 
-  const dirty = runningBalance !== student.balance;
-
-  function applyAdjust(sign: 1 | -1) {
-    if (!adjustAmount) return;
-    setRunningBalance((b) => Math.max(0, b + sign * adjustAmount));
-  }
+  const dirty = balanceInput !== String(student.balance);
 
   function saveBalance() {
+    const trimmed = balanceInput.trim();
+    if (trimmed === '' || !/^\d+$/.test(trimmed)) {
+      setBalanceError('أدخل رقمًا صحيحًا غير سالب');
+      return;
+    }
+    const parsed = Number(trimmed);
+    setBalanceError('');
     startBalance(async () => {
-      const res = await updateStudentBalance(student.id, runningBalance);
-      if (!res?.error) { setSaved(true); setTimeout(() => setSaved(false), 1500); }
+      const res = await updateStudentBalance(student.id, parsed);
+      if (!res?.error) {
+        setBalanceInput(String(parsed));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      } else {
+        setBalanceError(res.error);
+      }
     });
   }
 
@@ -218,15 +226,15 @@ function useStudentEditor(student: Student) {
   }
 
   return {
-    editing, setEditing, showPassword, setShowPassword, runningBalance, adjustAmount, setAdjustAmount,
-    savingBalance, saved, deleting, editState, editAction, dirty, applyAdjust, saveBalance, onDelete,
+    editing, setEditing, showPassword, setShowPassword, balanceInput, setBalanceInput, balanceError,
+    savingBalance, saved, deleting, editState, editAction, dirty, saveBalance, onDelete,
   };
 }
 
 function StudentRow({ student }: { student: Student }) {
   const {
-    editing, setEditing, showPassword, setShowPassword, runningBalance, adjustAmount, setAdjustAmount,
-    savingBalance, saved, deleting, editState, editAction, dirty, applyAdjust, saveBalance, onDelete,
+    editing, setEditing, showPassword, setShowPassword, balanceInput, setBalanceInput, balanceError,
+    savingBalance, saved, deleting, editState, editAction, dirty, saveBalance, onDelete,
   } = useStudentEditor(student);
 
   if (editing) {
@@ -264,18 +272,16 @@ function StudentRow({ student }: { student: Student }) {
       <td>
         <div className="flex flex-wrap items-center gap-1.5">
           <input
-            type="number" min={0} value={adjustAmount || ''}
-            onChange={(e) => setAdjustAmount(Math.max(0, Number(e.target.value) || 0))}
-            placeholder="عدد"
-            className="input !w-16 !py-1 text-center"
+            type="number" min={0} step={1} inputMode="numeric"
+            value={balanceInput}
+            onChange={(e) => setBalanceInput(e.target.value)}
+            className={`input !w-20 !py-1 text-center ${dirty ? '!ring-brand-gold' : ''} ${balanceError ? '!ring-brand-red' : ''}`}
           />
-          <button type="button" onClick={() => applyAdjust(1)} className="btn-ghost !px-2 !py-1 text-xs" title="إضافة نقاط">+</button>
-          <button type="button" onClick={() => applyAdjust(-1)} className="btn-ghost !px-2 !py-1 text-xs" title="خصم نقاط">−</button>
-          <span className={`min-w-[2.5rem] text-center font-semibold ${dirty ? 'text-brand-red' : ''}`}>{runningBalance}</span>
           <button type="button" onClick={saveBalance} disabled={savingBalance || !dirty} className="btn-primary !px-2.5 !py-1 text-xs">
             {saved ? '✓' : 'حفظ'}
           </button>
         </div>
+        {balanceError && <p className="mt-1 text-xs text-brand-red">{balanceError}</p>}
       </td>
       <td className="text-left">
         <div className="flex justify-end gap-1.5 whitespace-nowrap">
@@ -289,8 +295,8 @@ function StudentRow({ student }: { student: Student }) {
 
 function StudentCard({ student }: { student: Student }) {
   const {
-    editing, setEditing, showPassword, setShowPassword, runningBalance, adjustAmount, setAdjustAmount,
-    savingBalance, saved, deleting, editState, editAction, dirty, applyAdjust, saveBalance, onDelete,
+    editing, setEditing, showPassword, setShowPassword, balanceInput, setBalanceInput, balanceError,
+    savingBalance, saved, deleting, editState, editAction, dirty, saveBalance, onDelete,
   } = useStudentEditor(student);
 
   if (editing) {
@@ -341,18 +347,16 @@ function StudentCard({ student }: { student: Student }) {
         <p className="mb-1.5 text-xs text-brand-taupe">الرصيد</p>
         <div className="flex flex-wrap items-center gap-1.5">
           <input
-            type="number" min={0} value={adjustAmount || ''}
-            onChange={(e) => setAdjustAmount(Math.max(0, Number(e.target.value) || 0))}
-            placeholder="عدد"
-            className="input !w-16 !py-1.5 text-center"
+            type="number" min={0} step={1} inputMode="numeric"
+            value={balanceInput}
+            onChange={(e) => setBalanceInput(e.target.value)}
+            className={`input !w-24 !py-1.5 text-center ${dirty ? '!ring-brand-gold' : ''} ${balanceError ? '!ring-brand-red' : ''}`}
           />
-          <button type="button" onClick={() => applyAdjust(1)} className="btn-ghost !px-2.5 !py-1.5 text-sm" title="إضافة نقاط">+</button>
-          <button type="button" onClick={() => applyAdjust(-1)} className="btn-ghost !px-2.5 !py-1.5 text-sm" title="خصم نقاط">−</button>
-          <span className={`min-w-[2.5rem] text-center font-semibold ${dirty ? 'text-brand-red' : ''}`}>{runningBalance}</span>
           <button type="button" onClick={saveBalance} disabled={savingBalance || !dirty} className="btn-primary !px-3 !py-1.5 text-xs">
             {saved ? '✓' : 'حفظ'}
           </button>
         </div>
+        {balanceError && <p className="mt-1 text-xs text-brand-red">{balanceError}</p>}
       </div>
 
       <div className="mt-3 flex gap-2">
