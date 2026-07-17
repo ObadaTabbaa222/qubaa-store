@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const storeOpen = await getStoreOpen();
   return (
     <div className="min-h-screen">
-      <header className="no-print sticky top-0 z-10 border-b border-brand-sand bg-white/90 backdrop-blur">
+      <header className="no-print sticky top-0 z-50 border-b border-brand-sand bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-6">
           <Link href="/admin" className="flex items-center gap-2" aria-label="لوحة التحكم">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-red p-1.5">

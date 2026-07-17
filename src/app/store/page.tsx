@@ -27,7 +27,7 @@ export default async function StorePage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-brand-sand bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-brand-sand bg-white shadow-sm">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-red p-1.5">
