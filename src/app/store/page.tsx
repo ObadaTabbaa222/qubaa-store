@@ -15,14 +15,24 @@ export default async function StorePage() {
   const balance = me?.balance ?? 0;
 
   let products: any[] = [];
+  let alreadyOrdered: Record<string, number> = {};
   if (storeOpen) {
     const { data } = await supa
       .from('products')
-      .select('id, name, description, price_points, stock_quantity, image_url')
+      .select('id, name, description, price_points, stock_quantity, image_url, is_unlimited, max_per_student')
       .eq('is_active', true)
-      .gt('stock_quantity', 0)
+      .or('is_unlimited.eq.true,stock_quantity.gt.0')
       .order('price_points');
     products = data ?? [];
+
+    const { data: prevItems } = await supa
+      .from('order_items')
+      .select('product_id, quantity, orders!inner(student_id, status)')
+      .eq('orders.student_id', student.sub)
+      .neq('orders.status', 'cancelled');
+    for (const it of prevItems ?? []) {
+      alreadyOrdered[it.product_id] = (alreadyOrdered[it.product_id] || 0) + it.quantity;
+    }
   }
 
   return (
@@ -55,7 +65,7 @@ export default async function StorePage() {
         ) : (
           <>
             <p className="mb-5 text-sm text-brand-taupe">المتجر مفتوح الآن — اختر جوائزك ثم أكّد الطلب.</p>
-            <StoreClient products={products} balance={balance} />
+            <StoreClient products={products} balance={balance} alreadyOrdered={alreadyOrdered} />
           </>
         )}
       </main>

@@ -4,9 +4,26 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { placeOrder } from './actions';
 
-type Product = { id: string; name: string; description?: string; price_points: number; stock_quantity: number; image_url?: string };
+type Product = {
+  id: string;
+  name: string;
+  description?: string;
+  price_points: number;
+  stock_quantity: number;
+  image_url?: string;
+  is_unlimited: boolean;
+  max_per_student: number | null;
+};
 
-export function StoreClient({ products, balance }: { products: Product[]; balance: number }) {
+export function StoreClient({
+  products,
+  balance,
+  alreadyOrdered,
+}: {
+  products: Product[];
+  balance: number;
+  alreadyOrdered: Record<string, number>;
+}) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -18,8 +35,14 @@ export function StoreClient({ products, balance }: { products: Product[]; balanc
   );
   const count = useMemo(() => Object.values(cart).reduce((a, b) => a + b, 0), [cart]);
 
+  function maxAddable(p: Product) {
+    const remainingByLimit =
+      p.max_per_student != null ? Math.max(0, p.max_per_student - (alreadyOrdered[p.id] || 0)) : Infinity;
+    return p.is_unlimited ? remainingByLimit : Math.min(p.stock_quantity, remainingByLimit);
+  }
+
   function setQty(p: Product, qty: number) {
-    const q = Math.max(0, Math.min(qty, p.stock_quantity));
+    const q = Math.max(0, Math.min(qty, maxAddable(p)));
     setCart((c) => ({ ...c, [p.id]: q }));
   }
 
@@ -47,6 +70,8 @@ export function StoreClient({ products, balance }: { products: Product[]; balanc
       <div className="grid gap-3 sm:grid-cols-2">
         {products.map((p) => {
           const qty = cart[p.id] || 0;
+          const cap = maxAddable(p);
+          const limitReached = p.max_per_student != null && cap <= 0;
           return (
             <div key={p.id} className="card flex gap-3">
               {p.image_url ? (
@@ -59,12 +84,15 @@ export function StoreClient({ products, balance }: { products: Product[]; balanc
                 <h3 className="truncate font-semibold">{p.name}</h3>
                 {p.description && <p className="line-clamp-1 text-xs text-brand-taupe">{p.description}</p>}
                 <p className="mt-1 font-semibold text-brand-red">{p.price_points} نقطة</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <button onClick={() => setQty(p, qty - 1)} className="btn-ghost !h-8 !w-8 !p-0" disabled={qty === 0}>−</button>
-                  <span className="w-6 text-center font-mono">{qty}</span>
-                  <button onClick={() => setQty(p, qty + 1)} className="btn-ghost !h-8 !w-8 !p-0" disabled={qty >= p.stock_quantity}>+</button>
-                  <span className="mr-auto text-xs text-brand-taupe">متبقٍ {p.stock_quantity}</span>
-                </div>
+                {limitReached ? (
+                  <p className="mt-2 text-xs font-semibold text-brand-taupe">طلبته مسبقاً</p>
+                ) : (
+                  <div className="mt-2 flex items-center gap-2">
+                    <button onClick={() => setQty(p, qty - 1)} className="btn-ghost !h-8 !w-8 !p-0" disabled={qty === 0}>−</button>
+                    <span className="w-6 text-center font-mono">{qty}</span>
+                    <button onClick={() => setQty(p, qty + 1)} className="btn-ghost !h-8 !w-8 !p-0" disabled={qty >= cap}>+</button>
+                  </div>
+                )}
               </div>
             </div>
           );

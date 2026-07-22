@@ -13,6 +13,8 @@ export type Product = {
   stock_quantity: number;
   image_url: string | null;
   is_active: boolean;
+  is_unlimited: boolean;
+  max_per_student: number | null;
 };
 
 export function ProductsClient({ products }: { products: Product[] }) {
@@ -37,9 +39,12 @@ export function ProductsClient({ products }: { products: Product[] }) {
                   {!p.is_active && <span className="badge bg-brand-taupe/20 text-brand-taupe">مخفي</span>}
                 </div>
                 <p className="mt-0.5 text-sm text-brand-red">{p.price_points} نقطة</p>
-                <p className={`text-xs ${p.stock_quantity > 0 ? 'text-brand-taupe' : 'text-brand-red'}`}>
-                  المخزون: {p.stock_quantity}
+                <p className={`text-xs ${p.is_unlimited || p.stock_quantity > 0 ? 'text-brand-taupe' : 'text-brand-red'}`}>
+                  المخزون: {p.is_unlimited ? 'غير محدود' : p.stock_quantity}
                 </p>
+                {p.max_per_student != null && (
+                  <p className="text-xs text-brand-taupe">الحد لكل طالب: {p.max_per_student}</p>
+                )}
                 <div className="mt-2 flex gap-2">
                   <button onClick={() => setEditing(p)} className="btn-ghost !px-3 !py-1 text-xs">تعديل</button>
                   <DeleteButton id={p.id} />
@@ -62,6 +67,7 @@ export function ProductsClient({ products }: { products: Product[] }) {
 
 export function ProductForm({ product, onDone }: { product?: Product | null; onDone?: () => void }) {
   const [state, action] = useFormState(saveProduct, {} as any);
+  const [isUnlimited, setIsUnlimited] = useState(product?.is_unlimited ?? false);
 
   useEffect(() => {
     if (state?.ok) onDone?.();
@@ -75,7 +81,30 @@ export function ProductForm({ product, onDone }: { product?: Product | null; onD
       <div><label className="label">الوصف (اختياري)</label><textarea name="description" defaultValue={product?.description ?? ''} className="input" rows={2} /></div>
       <div className="grid grid-cols-2 gap-3">
         <div><label className="label">السعر (نقاط)</label><input name="price_points" type="number" min={1} defaultValue={product?.price_points} className="input" required /></div>
-        <div><label className="label">الكمية</label><input name="stock_quantity" type="number" min={0} defaultValue={product?.stock_quantity ?? 0} className="input" /></div>
+        <div>
+          <label className="label">الكمية</label>
+          <input
+            name="stock_quantity"
+            type="number"
+            min={0}
+            defaultValue={product?.stock_quantity ?? 0}
+            className="input"
+            disabled={isUnlimited}
+          />
+        </div>
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="is_unlimited"
+          checked={isUnlimited}
+          onChange={(e) => setIsUnlimited(e.target.checked)}
+          className="h-4 w-4 accent-brand-red"
+        /> كمية غير محدودة
+      </label>
+      <div>
+        <label className="label">الحد الأقصى لكل طالب (اتركه فارغاً لغير محدود)</label>
+        <input name="max_per_student" type="number" min={1} defaultValue={product?.max_per_student ?? ''} className="input" />
       </div>
       <div>
         <label className="label">صورة المنتج (اختياري)</label>

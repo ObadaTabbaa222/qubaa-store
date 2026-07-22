@@ -22,15 +22,22 @@ export async function saveProduct(_prev: any, form: FormData) {
     image_url = pub.publicUrl;
   }
 
+  const is_unlimited = form.get('is_unlimited') === 'on';
+  const maxPerStudentRaw = String(form.get('max_per_student') || '').trim();
+  const max_per_student = maxPerStudentRaw ? Number(maxPerStudentRaw) : null;
+
   const payload: Record<string, unknown> = {
     name: String(form.get('name') || '').trim(),
     description: String(form.get('description') || '').trim() || null,
     price_points: Number(form.get('price_points') || 0),
     stock_quantity: Number(form.get('stock_quantity') || 0),
     is_active: form.get('is_active') === 'on',
+    is_unlimited,
+    max_per_student,
   };
   if (image_url) payload.image_url = image_url;
   if (!payload.name || (payload.price_points as number) <= 0) return { error: 'الاسم والسعر مطلوبان' };
+  if (max_per_student != null && max_per_student <= 0) return { error: 'الحد الأقصى لكل طالب يجب أن يكون أكبر من صفر' };
 
   const res = id
     ? await supa.from('products').update(payload).eq('id', id)
