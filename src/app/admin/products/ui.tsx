@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFormState } from 'react-dom';
 import { ImageDropzone } from '@/components/ImageDropzone';
 import { saveProduct, deleteProduct } from './actions';
@@ -68,14 +68,25 @@ export function ProductsClient({ products }: { products: Product[] }) {
 export function ProductForm({ product, onDone }: { product?: Product | null; onDone?: () => void }) {
   const [state, action] = useFormState(saveProduct, {} as any);
   const [isUnlimited, setIsUnlimited] = useState(product?.is_unlimited ?? false);
+  const [imageResetKey, setImageResetKey] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state?.ok) onDone?.();
+    if (state?.ok) {
+      if (product) {
+        onDone?.();
+      } else {
+        // إضافة جديدة: فرّغ الحقول مع إبقاء رسالة النجاح ظاهرة
+        formRef.current?.reset();
+        setIsUnlimited(false);
+        setImageResetKey((k) => k + 1);
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.ok]);
+  }, [state]);
 
   return (
-    <form action={action} className="card space-y-3">
+    <form ref={formRef} action={action} className="card space-y-3">
       {product && <input type="hidden" name="id" value={product.id} />}
       <div><label className="label">اسم الجائزة</label><input name="name" defaultValue={product?.name} className="input" required /></div>
       <div><label className="label">الوصف (اختياري)</label><textarea name="description" defaultValue={product?.description ?? ''} className="input" rows={2} /></div>
@@ -108,7 +119,7 @@ export function ProductForm({ product, onDone }: { product?: Product | null; onD
       </div>
       <div>
         <label className="label">صورة المنتج (اختياري)</label>
-        <ImageDropzone name="image" defaultUrl={product?.image_url} />
+        <ImageDropzone key={imageResetKey} name="image" defaultUrl={product?.image_url} />
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="is_active" defaultChecked={product ? product.is_active : true} className="h-4 w-4 accent-brand-red" /> ظاهر في المتجر

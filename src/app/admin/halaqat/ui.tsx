@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useFormState } from 'react-dom';
 import {
   createHalaqahWithStudents,
@@ -17,9 +17,15 @@ type Credential = { full_name: string; username: string; password: string };
 
 export function CreateHalaqahForm() {
   const [state, action] = useFormState(createHalaqahWithStudents, {} as any);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state?.ok) formRef.current?.reset();
+  }, [state]);
+
   return (
     <div className="space-y-4">
-      <form action={action} className="card space-y-3">
+      <form ref={formRef} action={action} className="card space-y-3">
         <div><label className="label">اسم الحلقة</label><input name="name" className="input" placeholder="مثال: حلقة الفجر" required /></div>
         <div>
           <label className="label">أسماء الطلاب (اسم في كل سطر)</label>
@@ -38,9 +44,15 @@ export function CreateHalaqahForm() {
 
 export function AddStudentsForm({ halaqat }: { halaqat: { id: string; name: string }[] }) {
   const [state, action] = useFormState(addStudentsToHalaqah, {} as any);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state?.ok) formRef.current?.reset();
+  }, [state]);
+
   return (
     <div className="space-y-4">
-      <form action={action} className="card space-y-3">
+      <form ref={formRef} action={action} className="card space-y-3">
         <div>
           <label className="label">الحلقة</label>
           <select name="halaqah_id" className="input" required>
@@ -143,7 +155,8 @@ export function HalaqahSection({ halaqah, students }: { halaqah: { id: string; n
           </h3>
         )}
         {!editingName && (
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
+            <CopyHalaqahButton halaqahName={halaqah.name} students={students} />
             <button onClick={() => setEditingName(true)} className="btn-ghost !px-2.5 !py-1 text-xs">تعديل الاسم</button>
             <button onClick={onDelete} disabled={deleting} className="btn-danger !px-2.5 !py-1 text-xs">حذف الحلقة</button>
           </div>
@@ -173,6 +186,64 @@ export function HalaqahSection({ halaqah, students }: { halaqah: { id: string; n
         </>
       )}
     </div>
+  );
+}
+
+function buildHalaqahCopyText(halaqahName: string, students: Student[]) {
+  const blocks = students.map(
+    (s) =>
+      `الطالب: ${s.full_name}\nاسم المستخدم: ${s.username}\nكلمة المرور: ${s.password_plain ?? '—'}\n————————————`
+  );
+  return `حلقة: ${halaqahName}\n\n${blocks.join('\n')}`;
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // نتابع إلى الحل البديل
+    }
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function CopyHalaqahButton({ halaqahName, students }: { halaqahName: string; students: Student[] }) {
+  const [copied, setCopied] = useState(false);
+
+  async function onClick() {
+    const ok = await copyToClipboard(buildHalaqahCopyText(halaqahName, students));
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={students.length === 0}
+      className="btn-ghost !px-2.5 !py-1 text-xs"
+    >
+      {copied ? 'تم النسخ ✓' : 'نسخ معلومات الحلقة'}
+    </button>
   );
 }
 

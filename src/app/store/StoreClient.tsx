@@ -27,6 +27,7 @@ export function StoreClient({
   const [cart, setCart] = useState<Record<string, number>>({});
   const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
+  const [sortOrder, setSortOrder] = useState<'default' | 'desc' | 'asc'>('default');
   const router = useRouter();
 
   const total = useMemo(
@@ -34,6 +35,13 @@ export function StoreClient({
     [cart, products]
   );
   const count = useMemo(() => Object.values(cart).reduce((a, b) => a + b, 0), [cart]);
+
+  const sortedProducts = useMemo(() => {
+    if (sortOrder === 'default') return products;
+    const arr = [...products];
+    arr.sort((a, b) => (sortOrder === 'desc' ? b.price_points - a.price_points : a.price_points - b.price_points));
+    return arr;
+  }, [products, sortOrder]);
 
   function maxAddable(p: Product) {
     const remainingByLimit =
@@ -67,8 +75,23 @@ export function StoreClient({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {products.map((p) => {
+      <div>
+        {products.length > 0 && (
+          <div className="mb-3 flex items-center justify-end gap-2">
+            <label className="text-sm text-brand-taupe">ترتيب حسب السعر</label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'default' | 'desc' | 'asc')}
+              className="input !w-auto !py-1.5 text-sm"
+            >
+              <option value="default">الترتيب الافتراضي</option>
+              <option value="desc">الأغلى أولاً</option>
+              <option value="asc">الأرخص أولاً</option>
+            </select>
+          </div>
+        )}
+        <div className="grid gap-3 sm:grid-cols-2">
+        {sortedProducts.map((p) => {
           const qty = cart[p.id] || 0;
           const cap = maxAddable(p);
           const limitReached = p.max_per_student != null && cap <= 0;
@@ -98,6 +121,7 @@ export function StoreClient({
           );
         })}
         {products.length === 0 && <p className="text-sm text-brand-taupe">لا توجد جوائز متاحة حالياً.</p>}
+        </div>
       </div>
 
       <div className="lg:sticky lg:top-20 lg:self-start">
